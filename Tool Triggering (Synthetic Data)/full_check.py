@@ -501,12 +501,69 @@ def rule_functional_flag():
                  "different findings and must not share a label")
 
 
+def _toml_table(body, name):
+    """Text of one [table] up to the next header, or None."""
+    m = re.search(r"^\[%s\][ \t]*\n(.*?)(?=^\[|\Z)" % re.escape(name), body, re.M | re.S)
+    return m.group(1) if m else None
+
+
+def _pins_from_project(table):
+    block = re.search(r"^dependencies\s*=\s*\[(.*?)\]", table, re.M | re.S)
+    pins = {}
+    for item in re.findall(r'"([^"]+)"', block.group(1) if block else ""):
+        name, _, ver = item.partition("==")
+        pins[name.strip().lower()] = ver.strip()
+    return pins
+
+
+def rule_metadata_agreement():
+    check("dual metadata agreement")
+    body = read("pyproject.toml")
+    project = _toml_table(body, "project")
+    if project is None:
+        return
+    poetry = _toml_table(body, "tool.poetry")
+    cfg = read("setup.cfg") if exists("setup.cfg") else ""
+    if poetry is not None:
+        deps = _toml_table(body, "tool.poetry.dependencies") or ""
+        other = "[tool.poetry]"
+        o_name = re.search(r'^name\s*=\s*"([^"]+)"', poetry, re.M)
+        o_ver = re.search(r'^version\s*=\s*"([^"]+)"', poetry, re.M)
+        o_py = re.search(r'^python\s*=\s*"([^"]+)"', deps, re.M)
+        o_pins = dict((k.lower(), v) for k, v in
+                      re.findall(r'^([A-Za-z0-9_.-]+)\s*=\s*"([^"]+)"', deps, re.M) if k != "python")
+    elif re.search(r"^\[metadata\]", cfg, re.M):
+        other = "setup.cfg"
+        o_name = re.search(r"^name\s*=\s*(\S+)", cfg, re.M)
+        o_ver = re.search(r"^version\s*=\s*(\S+)", cfg, re.M)
+        o_py = re.search(r"^python_requires\s*=\s*(\S+)", cfg, re.M)
+        req = re.search(r"^install_requires\s*=\s*\n((?:[ \t]+\S+\n)+)", cfg, re.M)
+        o_pins = {}
+        for item in (req.group(1).split() if req else []):
+            n, _, v = item.partition("==")
+            o_pins[n.lower()] = v
+    else:
+        return
+    p_name = re.search(r'^name\s*=\s*"([^"]+)"', project, re.M)
+    p_ver = re.search(r'^version\s*=\s*"([^"]+)"', project, re.M)
+    p_py = re.search(r'^requires-python\s*=\s*"([^"]+)"', project, re.M)
+    for label, a, b in (("name", p_name, o_name), ("version", p_ver, o_ver),
+                        ("python pin", p_py, o_py)):
+        if not a or not b:
+            fail("cannot compare %s between [project] and %s" % (label, other))
+        elif a.group(1) != b.group(1):
+            fail("[project] %s %r disagrees with %s %r"
+                 % (label, a.group(1), other, b.group(1)))
+    if _pins_from_project(project) != o_pins:
+        fail("[project] dependencies disagree with %s runtime pins" % other)
+
+
 def main():
     for rule in (rule_interpreter_agreement, rule_pyproject_parses, rule_triggers, rule_status_matches_dataset,
                  rule_planted_pins, rule_duplicate_pair, rule_no_empty_packages,
                  rule_workspace, rule_readme, rule_prose_matches_repo,
                  rule_branch_identity,
-                 rule_shell_and_yaml, rule_functional_flag):
+                 rule_shell_and_yaml, rule_functional_flag, rule_metadata_agreement):
         try:
             rule()
         except Exception as exc:            # a rule that crashes is a FAIL, not a pass

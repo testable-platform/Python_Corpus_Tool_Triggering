@@ -21,7 +21,7 @@ difference in tool output is attributable to the branch variables alone.
 
 > **Build backend.** uv_build 0.12.9 -- MANDATES PEP 621 [project] and requires Python >=3.8. 3.8 is exactly that floor, so this is the first family in which the backend actually executes -- and it does so at the current latest release, not a rolled-back one.
 
-> **Package manager.** poetry 1.8.5 -- the newest release admitting Python 3.8. Uses the pre-PEP-621 [tool.poetry] table.
+> **Package manager.** poetry 1.8.5 -- the newest release admitting Python 3.8. Uses the pre-PEP-621 [tool.poetry] table. poetry 1.8.5 predates poetry 2's PEP 621 support, so it reads dependencies and the package location from [tool.poetry]; pyproject.toml carries a mirrored [tool.poetry] table next to the [project] table that uv_build requires.
 
 ## Supported tools
 
@@ -100,11 +100,11 @@ claim, an import is better evidence, and only invoking the tool is the fact.
   seven Cognitive Complexity metrics their first cross-check; crosshair
   installs and imports but dies on invocation, which is the corpus's clearest
   example of why a status is measured by running a tool and not by importing it.
-- **Two branches still cannot be locked**, and it is worth being precise about
-  why: uv requires PEP 621, poetry-core 1.9.1 writes `[tool.poetry]`, and
-  neither is broken. That is a metadata-shape incompatibility, not an
-  interpreter floor -- a different class of finding from the previous
-  families.
+- **poetry-core 1.9.1 and uv work together once both metadata shapes exist.** uv
+  requires PEP 621 `[project]` and poetry-core 1.9.1 / poetry 1.8.5 write and read
+  `[tool.poetry]`; the `POETRY_UV` and `UV_POETRY` branches carry both tables and
+  `full_check.py` keeps them in step. The earlier "metadata-shape incompatibility"
+  was a gap in the fixture, not a property of the toolchain.
 
 
 ## Build
@@ -114,7 +114,7 @@ python -m pip install 'poetry==1.8.5'
 poetry install
 ```
 
-> Both the backend and the package manager on this branch run on Python 3.8.18 for real; the branch installs, locks and tests cleanly.
+> Both the backend and the package manager on this branch run on Python 3.8.18 for real. poetry 1.8.5 reads `[tool.poetry]`, uv_build reads `[project]`, so `pyproject.toml` carries both tables, kept in step by `full_check.py`; the branch installs, locks and tests cleanly.
 
 ## Run
 
