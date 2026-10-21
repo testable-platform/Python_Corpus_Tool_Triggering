@@ -22,9 +22,9 @@
   "toolsWired": 29,
   "toolsActive": 12,
   "toolsDark": 17,
-  "branchFunctional": false,
-  "backendNote": "poetry-core 1.9.1 -- the newest release admitting Python 3.8. Still predates poetry-core 2, so metadata lives in [tool.poetry] and there is no PEP 621 [project] table. On this family that is no longer cosmetic: it is what makes the poetry-core + uv pairing impossible.",
-  "packageManagerNote": "uv 0.12.9 runs here -- 3.8 is exactly its floor, and this is the CURRENT LATEST uv, not a rolled-back one. Verified in-session: `uv venv --python 3.8` succeeds, `uv pip install` resolves, `uv lock` produces a lockfile, and `uv python install 3.8` installs a managed CPython 3.8.20. After two families in which this axis was entirely dark, it is live. NOTE: uv requires a PEP 621 [project] table, so it cannot drive a poetry-core branch.",
+  "branchFunctional": true,
+  "backendNote": "poetry-core 1.9.1 -- the newest release admitting Python 3.8. Still predates poetry-core 2, so metadata lives in [tool.poetry] and poetry-core does not write a PEP 621 [project] table. uv needs a PEP 621 [project] table to read the project and poetry-core 1.x does not write one, so pyproject.toml also carries a mirrored [project] table; [tool.poetry] stays authoritative for the build and full_check.py asserts the two agree.",
+  "packageManagerNote": "uv 0.12.9 runs here -- 3.8 is exactly its floor, and this is the CURRENT LATEST uv, not a rolled-back one. Verified in-session: `uv venv --python 3.8` succeeds, `uv pip install` resolves, `uv lock` produces a lockfile, and `uv python install 3.8` installs a managed CPython 3.8.20. After two families in which this axis was entirely dark, it is live. uv requires a PEP 621 [project] table; the mirrored one in pyproject.toml supplies it, so uv drives this poetry-core branch.",
   "testRunner": "pytest==8.3.5",
   "plantedFixtures": {
     "duplication": [
@@ -296,7 +296,5 @@
       "why": "crosshair-tool 0.0.110 declares Requires-Python >=3.8, pip installs it, AND `import crosshair` succeeds -- and then the tool dies the moment it is invoked: crosshair/libimpl/builtinslib.py line 3860 subscripts collections.abc.Mapping, which is PEP 585 and therefore 3.9+, raising TypeError: 'ABCMeta' object is not subscriptable. The offending module is imported lazily, so the top-level package imports cleanly. This is a DEEPER trap than lizard or pydriller, which at least failed at `import <pkg>`: a probe that stops at the top-level import marks this tool ACTIVE. Only invoking it tells the truth.",
       "failureMode": "installs cleanly, then raises SyntaxError at import"
     }
-  ],
-  "nonFunctionalReason": "uv requires a PEP 621 [project] table and poetry-core 1.9.1 does not write one, so `uv lock` and `uv sync` both fail with `error: No `project` table found in: pyproject.toml`. Neither half of the toolchain is broken and neither is at fault; they are incompatible. This is the only failure mode of its kind in the corpus.",
-  "nonFunctionalClass": "metadata-shape incompatibility"
+  ]
 }

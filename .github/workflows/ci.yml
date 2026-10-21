@@ -49,7 +49,7 @@ jobs:
         run: |
           python3.8 -m venv .venv
           .venv/bin/python -m pip install --upgrade "pip==25.0.1"
-          echo "uv cannot drive a poetry-core project -- see uv.lock.MISSING" && .venv/bin/python -m pip install -r requirements-runtime.txt -r requirements-dev.txt
+          curl -LsSf https://astral.sh/uv/0.12.9/install.sh | sh && $HOME/.local/bin/uv sync --all-extras --python .venv/bin/python
 
       - name: Install opengrep and Trivy
         run: |
