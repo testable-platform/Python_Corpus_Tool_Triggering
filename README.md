@@ -17,9 +17,9 @@ difference in tool output is attributable to the branch variables alone.
 | Architecture | Microservices |
 | Scenario | 2 - Microservices |
 | Source root | `packages/domain/src` |
-| Branch usable | **no** -- conda can create a python=3. |
+| Branch usable | yes |
 
-> **Build backend.** uv_build 0.12.9 -- MANDATES PEP 621 [project] and requires Python >=3.8. No release has ever admitted 3.7 either, so this backend cannot execute on this branch. Declared, never invoked.
+> **Build backend.** uv_build 0.12.9 -- MANDATES PEP 621 [project]. The uv_build package declares Requires-Python >=3.8, so pip's isolated build environment refuses it on CPython 3.7.17 ("No matching distribution found for uv_build>=0.12.9") unless Requires-Python is bypassed for that one step (PIP_IGNORE_REQUIRES_PYTHON=1). uv_build is a native binary behind a thin shim, so once installed it builds the pure-Python wheel for real. Verified under CPython 3.7.17: the wheel builds, the package imports and the test suite passes. pip resolves `uv_build>=0.12.9` to the newest release, which can be later than 0.12.9. CI builds the project with pip inside the environment, because the conda hosts are unreachable from CI (as on the SETUPTOOLS_CONDA sibling).
 
 > **Package manager.** conda can create a python=3.7.17 environment from conda-forge, but conda.anaconda.org and repo.anaconda.com are 403 at this build host's egress proxy, so no solved lock could be produced here. environment.yml is complete and solves on the operator's machine.
 
@@ -102,6 +102,8 @@ conda env update -f environment.yml
 ```
 
 > `environment.yml` is complete but no solved lock ships with it: conda.anaconda.org and repo.anaconda.com are both 403 at the egress proxy of the host this corpus was built on. Run `conda list --explicit > conda-lock.txt` on a machine with access to close the gap.
+
+> The project itself is built with `PIP_IGNORE_REQUIRES_PYTHON=1 python -m pip install --no-deps -e .` inside the environment (uv_build declares Requires-Python >=3.8; see Build backend above).
 
 ## Run
 
